@@ -6,13 +6,12 @@ import { getDownloadURL, getStorage, ref, uploadBytesResumable } from "firebase/
 import { doc, getFirestore, setDoc } from "firebase/firestore";
 import { useUser } from "@clerk/nextjs";
 import { generateRandomString } from "@/GenerateRandomString";
-import { useRouter } from "next/navigation";
+
 
 export default function Upload() {
   const { user, isSignedIn } = useUser();
   const storage = getStorage(app);
   const db = getFirestore(app);
-  const router = useRouter();
   const [id, setId] = useState('');
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState('');
@@ -88,11 +87,6 @@ export default function Upload() {
     );
   }, [isSignedIn, saveInfo, storage]);
 
-  useEffect(() => {
-    if (id) {
-      router.push(`/file-preview/${id}`);
-    }
-  }, [id, router]);
 
   return (
     <div className="p-5 px-8 md:px-28">

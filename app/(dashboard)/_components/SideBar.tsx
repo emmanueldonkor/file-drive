@@ -25,7 +25,7 @@ export default function SideBar() {
         <Image src="/logo.svg" width={50} height={100} alt="logo" />
       </div>
       <div className="flex flex-col float-left w-full">
-        {menuList.map((item, index) => (
+        {menuList.map((item) => (
           <Link href={item.path} key={item.id} className={`flex gap-2 p-4 px-6 hover:bg-gray-100 w-full text-gray-500 ${activeIndex === item.id? 'bg-blue-50 text-blue-500': null}`} onClick={()=>setActiveIndex(item.id)}>
             <item.icon />
             <h2>{item.name}</h2>

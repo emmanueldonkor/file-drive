@@ -1,12 +1,11 @@
-'use client';  // Add this at the top
-
+'use client';  
 import { useEffect, useState } from "react";
 import { getFirestore, collection, query, where, getDocs, limit, startAfter, QueryDocumentSnapshot, DocumentData } from "firebase/firestore";
 import { getStorage, ref, getDownloadURL } from "firebase/storage";
 import { app } from "@/firebaseConfig";
 import { useUser } from "@clerk/nextjs";
-import { ToastContainer, toast } from 'react-toastify'; // Import Toast
-import 'react-toastify/dist/ReactToastify.css'; // Toast CSS
+import { ToastContainer, toast } from 'react-toastify'; 
+import 'react-toastify/dist/ReactToastify.css'; 
 
 export default function Files() {
   const { user, isSignedIn } = useUser();
@@ -84,12 +83,10 @@ export default function Files() {
         toast.success(`Share link for "${getFileName(file.fileName)}" copied to clipboard!`);
       }
     } catch (err) {
-      console.error('Error generating share link:', err);
       toast.error('Failed to generate share link. Error: ' + err);
     }
   };
   
-
   useEffect(() => {
     if (isSignedIn) {
       fetchFiles();
