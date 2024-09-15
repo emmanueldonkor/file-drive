@@ -1,4 +1,5 @@
 'use client'
+
 import { useState } from 'react';
 import { UserButton } from "@clerk/nextjs";
 import { AlignJustify, X } from "lucide-react";
@@ -19,31 +20,31 @@ export default function TopHeader() {
         />
         <UserButton />
         <Link href="/">
-        <Image
-          src='/logo.svg'
-          width={30}
-          height={30}
-          alt="logo"
-          className="md:hidden"
-        />
+          <Image
+            src='/logo.svg'
+            width={30}
+            height={30}
+            alt="logo"
+            className="md:hidden"
+          />
         </Link>
       </header>
 
       {isMenuOpen && (
-        <div className="fixed top-0 right-0 w-64 h-full bg-white shadow-lg md:hidden z-50">
+        <div className={`fixed top-0 left-0 w-64 h-full bg-white shadow-lg md:hidden z-50 transition-transform ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
           <div className="flex items-center justify-between p-4 border-b">
             <span className="text-lg font-bold">Menu</span>
             <X
               className="cursor-pointer"
               onClick={toggleMenu}
-              size={24} 
+              size={24}
             />
           </div>
-          <nav className="flex flex-col p-4">
-            <Link href="/upload" passHref className="py-2 border-b text-lg block cursor-pointer">
+          <nav className="flex flex-col p-4 space-y-2">
+            <Link href="/upload" passHref className="py-2 border-b text-lg block cursor-pointer hover:bg-gray-100 transition-colors">
               Upload
             </Link>
-            <Link href="/files" passHref className="py-2 border-b text-lg block cursor-pointer">
+            <Link href="/files" passHref className="py-2 border-b text-lg block cursor-pointer hover:bg-gray-100 transition-colors">
               Files
             </Link>
           </nav>
@@ -52,4 +53,5 @@ export default function TopHeader() {
     </div>
   );
 }
+
 
