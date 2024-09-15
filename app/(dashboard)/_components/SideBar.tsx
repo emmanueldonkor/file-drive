@@ -22,7 +22,9 @@ export default function SideBar() {
   return (
     <div className="shadow-sm border-r h-full">
       <div className="p-5 border-b">
-        <Image src="/logo.svg" width={50} height={100} alt="logo" />
+        <Link href="/">
+        <Image src="/logo.svg" width={30} height={30} alt="logo" />
+        </Link>
       </div>
       <div className="flex flex-col float-left w-full">
         {menuList.map((item) => (
