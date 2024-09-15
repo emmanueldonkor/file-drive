@@ -33,8 +33,7 @@ export default function Page() {
         </h2>
 
         <p className="mt-4 leading-relaxed text-white/90">
-          Lorem, ipsum dolor sit amet consectetur adipisicing elit. Eligendi nam dolorum aliquam,
-          quibusdam aperiam voluptatum.
+          A simple, fast, and secure way to share files and collaborate with others.
         </p>
       </div>
     </section>
@@ -67,8 +66,7 @@ export default function Page() {
           </h1>
 
           <p className="mt-4 leading-relaxed text-gray-500">
-            Lorem, ipsum dolor sit amet consectetur adipisicing elit. Eligendi nam dolorum aliquam,
-            quibusdam aperiam voluptatum.
+            Share files with a short-lived link. Files are deleted after 24 hours.
           </p>
         </div>
          <SignIn /> 

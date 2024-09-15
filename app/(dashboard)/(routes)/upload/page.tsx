@@ -35,14 +35,13 @@ export default function Upload() {
         shortUrl: `${process.env.NEXT_PUBLIC_BASE_URL}${docId}`
       });
       setId(docId);
-      console.log(`filePreviewId set to: ${docId}`); // Debug log
     } catch (error) {
       console.error('Error setting document in Firestore', error);
       setError('Error setting document in Firestore. Please try again.');
     }
   }, [db, user]);
 
-  // The updated uploadFile function with error handling for root reference issue
+
   const uploadFile = useCallback((file: File) => {
     if (!isSignedIn) {
       setError('You must be signed in to upload files.');
