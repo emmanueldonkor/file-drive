@@ -9,7 +9,7 @@ export default function TopHeader(){
      <UserButton />
      <Image 
      src='/logo.svg'
-      width={40} height={40}  alt="logo" className="md:hidden"/>
+      width={30} height={30}  alt="logo" className="md:hidden"/>
     </div>
     );
 }
