@@ -49,7 +49,7 @@ export default function Page() {
               </p>
             </div>
             <SignIn />
-            <Link href="/forgot-password" className="mt-4 block text-center text-black-600 hover:text-blue-500 transition">
+            <Link href="/forgot-password" className="mt-4 block text-center text-sm text-gray-400 hover:text-gray-500 transition underline">
               Forgot Password?
             </Link>
           </div>
