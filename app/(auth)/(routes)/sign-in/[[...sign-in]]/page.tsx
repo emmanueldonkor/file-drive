@@ -71,7 +71,7 @@ export default function Page() {
           </p>
         </div>
          <SignIn /> 
-         <ForgotPasswordPage />
+         <Link href="/forgot-password">Forgot Password</Link>
       </div>
     </main>
   </div>
