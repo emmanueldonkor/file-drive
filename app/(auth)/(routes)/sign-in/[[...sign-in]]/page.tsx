@@ -1,4 +1,5 @@
-import { SignedIn, SignIn, UserButton } from "@clerk/nextjs";
+import { SignIn } from "@clerk/nextjs";
+import ForgotPasswordPage from "@/app/forgot-password";
 import Link from "next/link";
 
 export default function Page() {
@@ -70,6 +71,7 @@ export default function Page() {
           </p>
         </div>
          <SignIn /> 
+         <ForgotPasswordPage />
       </div>
     </main>
   </div>
