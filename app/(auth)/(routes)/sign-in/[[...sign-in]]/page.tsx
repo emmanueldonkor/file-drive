@@ -49,9 +49,6 @@ export default function Page() {
               </p>
             </div>
             <SignIn />
-            <Link href="/forgot-password" className="mt-4 block text-center text-sm text-gray-400 hover:text-gray-500 transition hover:underline">
-              Forgot Password?
-            </Link>
           </div>
         </main>
       </div>
