@@ -149,6 +149,15 @@ const getDisplayFileSize = (file: UploadedFile) => {
   return file.originalFileSize ?? file.fileSize
 }
 
+const formatFileSize = (bytes: number) => {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
+}
+
+const normalizeDecryptionKey = (value: string) =>
+  value.trim().replace(/\s+/g, '+')
+
 const getShareLinkForFile = (file: UploadedFile, key?: string | null) => {
   const baseLink = buildShareLink(file.id, file.shortUrl)
   if (!file.isEncrypted || !key) return baseLink
@@ -332,11 +341,19 @@ export default function Files() {
               'Sharing without key. Receiver must enter key manually on the share page.',
             )
           } else {
-            key = providedKey.trim()
+            key = normalizeDecryptionKey(providedKey)
             saveFileKey(file.id, key)
           }
         }
-        shareLink = getShareLinkForFile(file, key)
+        if (key) {
+          const secureShareMessage = [
+            'Secure File Share',
+            `Link: ${shareLink}`,
+            `Decryption Key: ${key}`,
+            'Open the link and paste the key into the Decryption Key field.',
+          ].join('\n')
+          shareLink = secureShareMessage
+        }
       }
 
       const copied = await copyToClipboard(shareLink)
@@ -359,7 +376,7 @@ export default function Files() {
       'Enter the decryption key for this file:',
     )
     if (!userProvidedKey?.trim()) return null
-    const normalizedKey = userProvidedKey.trim()
+    const normalizedKey = normalizeDecryptionKey(userProvidedKey)
     saveFileKey(file.id, normalizedKey)
     return normalizedKey
   }
@@ -441,7 +458,7 @@ export default function Files() {
                   <tr key={file.id} className="border-t hover:bg-gray-100">
                     <td className="px-6 py-3">{getDisplayFileName(file)}</td>
                     <td className="px-6 py-3">
-                      {(getDisplayFileSize(file) / (1024 * 1024)).toFixed(2)} MB
+                      {formatFileSize(getDisplayFileSize(file))}
                     </td>
                     <td className="px-6 py-3">
                       {fileTypeMapping(getDisplayFileType(file))}

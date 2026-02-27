@@ -29,12 +29,33 @@ const isExpired = (expiresAt?: number | null) => {
   return typeof expiresAt === 'number' && Date.now() > expiresAt
 }
 
+const normalizeDecryptionKey = (value: string) =>
+  value.trim().replace(/\s+/g, '+')
+
+const formatFileSize = (bytes: number) => {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
+}
+
 const getKeyFromHash = () => {
   if (typeof window === 'undefined') return ''
   const hashValue = window.location.hash.replace(/^#/, '')
   if (!hashValue) return ''
-  const params = new URLSearchParams(hashValue)
-  return params.get('k')?.trim() ?? ''
+
+  const keyPair = hashValue
+    .split('&')
+    .find((pair) => pair.startsWith('k=') || pair.startsWith('key='))
+  if (!keyPair) return ''
+
+  const rawKey = keyPair.includes('=')
+    ? keyPair.split('=').slice(1).join('=')
+    : ''
+  try {
+    return normalizeDecryptionKey(decodeURIComponent(rawKey))
+  } catch {
+    return normalizeDecryptionKey(rawKey)
+  }
 }
 
 export default function SharedFilePage() {
@@ -199,7 +220,7 @@ export default function SharedFilePage() {
   )
 
   const onApplyKey = () => {
-    const normalized = keyInput.trim()
+    const normalized = normalizeDecryptionKey(keyInput)
     if (!normalized) {
       setDecryptError('Please provide a decryption key.')
       return
@@ -260,7 +281,7 @@ export default function SharedFilePage() {
         <strong>Type:</strong> {displayType}
       </p>
       <p className="mt-1 text-sm text-gray-600">
-        <strong>Size:</strong> {(displaySize / (1024 * 1024)).toFixed(2)} MB
+        <strong>Size:</strong> {formatFileSize(displaySize)}
       </p>
       {file.isEncrypted && (
         <p className="mt-1 text-sm text-gray-600">

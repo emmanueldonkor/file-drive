@@ -25,7 +25,18 @@ const uint8ArrayToBase64 = (bytes: Uint8Array): string => {
 }
 
 const base64ToUint8Array = (base64: string): Uint8Array => {
-  const binary = atob(base64)
+  const trimmedValue = base64.trim()
+  const normalizedValue = trimmedValue
+    .replace(/\s+/g, '+')
+    .replace(/-/g, '+')
+    .replace(/_/g, '/')
+  const missingPadding = normalizedValue.length % 4
+  const paddedValue =
+    missingPadding === 0
+      ? normalizedValue
+      : `${normalizedValue}${'='.repeat(4 - missingPadding)}`
+
+  const binary = atob(paddedValue)
   const bytes = new Uint8Array(binary.length)
   for (let i = 0; i < binary.length; i++) {
     bytes[i] = binary.charCodeAt(i)
