@@ -79,12 +79,61 @@ const toExpiryTimestamp = (expiryOption: ExpiryOption) => {
   return Date.now() + SEVEN_DAYS_MS
 }
 
-const buildShareLink = (fileId: string, shortUrl?: string) => {
-  if (shortUrl?.trim()) return shortUrl
+const getRuntimeOrigin = () => {
   if (typeof window !== 'undefined' && window.location?.origin) {
-    return `${window.location.origin}/share/${fileId}`
+    return window.location.origin
   }
-  return `/share/${fileId}`
+  const envBaseUrl = process.env.NEXT_PUBLIC_BASE_URL?.trim()
+  return envBaseUrl ? envBaseUrl.replace(/\/+$/, '') : 'http://localhost:3000'
+}
+
+const isLocalHostName = (hostname: string) => {
+  return hostname === 'localhost' || hostname === '127.0.0.1'
+}
+
+const buildShareLink = (fileId: string, shortUrl?: string) => {
+  const origin = getRuntimeOrigin()
+
+  if (shortUrl?.trim()) {
+    try {
+      const parsedShortUrl = new URL(shortUrl, origin)
+      const isSharePath = parsedShortUrl.pathname.startsWith('/share/')
+      if (isSharePath) {
+        if (isLocalHostName(parsedShortUrl.hostname)) {
+          return `${origin}${parsedShortUrl.pathname}`
+        }
+        return parsedShortUrl.toString()
+      }
+    } catch {
+      // Fallback to canonical format.
+    }
+  }
+
+  return `${origin}/share/${fileId}`
+}
+
+const copyToClipboard = async (text: string) => {
+  if (typeof window === 'undefined') return false
+
+  try {
+    await navigator.clipboard.writeText(text)
+    return true
+  } catch {
+    try {
+      const textArea = document.createElement('textarea')
+      textArea.value = text
+      textArea.style.position = 'fixed'
+      textArea.style.opacity = '0'
+      document.body.appendChild(textArea)
+      textArea.focus()
+      textArea.select()
+      const copied = document.execCommand('copy')
+      document.body.removeChild(textArea)
+      return copied
+    } catch {
+      return false
+    }
+  }
 }
 
 const getDisplayFileName = (file: UploadedFile) => {
@@ -207,6 +256,7 @@ export default function Files() {
     const expiryOption =
       expiryById[file.id] ?? inferExpiryOption(file.expiresAt)
     const expiresAt = toExpiryTimestamp(expiryOption)
+    const canonicalShareLink = buildShareLink(file.id, file.shortUrl)
 
     setActiveFileId(file.id)
     try {
@@ -214,6 +264,7 @@ export default function Files() {
         sharePermission: permission,
         expiresAt,
         isRevoked: false,
+        shortUrl: canonicalShareLink,
       })
 
       setFiles((prev) =>
@@ -224,6 +275,7 @@ export default function Files() {
                 sharePermission: permission,
                 expiresAt,
                 isRevoked: false,
+                shortUrl: canonicalShareLink,
               }
             : item,
         ),
@@ -276,18 +328,23 @@ export default function Files() {
             'This file is encrypted. Enter the decryption key to include in the share link:',
           )
           if (!providedKey?.trim()) {
-            toast.error('A decryption key is required to share this file.')
-            return
+            toast.warning(
+              'Sharing without key. Receiver must enter key manually on the share page.',
+            )
+          } else {
+            key = providedKey.trim()
+            saveFileKey(file.id, key)
           }
-          key = providedKey.trim()
-          saveFileKey(file.id, key)
         }
         shareLink = getShareLinkForFile(file, key)
       }
 
-      if (typeof window !== 'undefined') {
-        await navigator.clipboard.writeText(shareLink)
+      const copied = await copyToClipboard(shareLink)
+      if (copied) {
         toast.success(`Share link for "${getDisplayFileName(file)}" copied.`)
+      } else if (typeof window !== 'undefined') {
+        window.prompt('Copy this share link:', shareLink)
+        toast.info('Clipboard permission blocked. Link opened for manual copy.')
       }
     } catch (err) {
       toast.error('Failed to copy share link.')

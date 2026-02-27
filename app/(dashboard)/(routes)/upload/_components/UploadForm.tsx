@@ -1,4 +1,4 @@
-import { useState, useEffect, ChangeEvent } from 'react'
+import { useState, useEffect, ChangeEvent, useRef } from 'react'
 import { ToastContainer, toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import AlertMes from './AlertMes'
@@ -19,6 +19,7 @@ export default function UploadForm({
   const [file, setFile] = useState<File | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [isUploadComplete, setIsUploadComplete] = useState<boolean>(false)
+  const lastSuccessFileIdRef = useRef<string>('')
 
   const onFileSelect = (event: ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0]
@@ -33,8 +34,11 @@ export default function UploadForm({
   }
 
   useEffect(() => {
-    if (progress === 100) {
-      toast.success('File uploaded successfully!')
+    if (progress === 100 && fileId && lastSuccessFileIdRef.current !== fileId) {
+      lastSuccessFileIdRef.current = fileId
+      toast.success('File uploaded successfully!', {
+        toastId: `upload-success-${fileId}`,
+      })
       setIsUploadComplete(true)
       setTimeout(() => {
         setFile(null)
