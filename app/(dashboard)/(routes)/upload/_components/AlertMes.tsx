@@ -1,7 +1,7 @@
-import { AlertCircle } from "lucide-react";
+import { AlertCircle } from 'lucide-react'
 
 interface AlertMesProps {
-  message: string;
+  message: string
 }
 export default function AlertMes({ message }: AlertMesProps) {
   return (
@@ -9,5 +9,5 @@ export default function AlertMes({ message }: AlertMesProps) {
       <AlertCircle />
       {message}
     </div>
-  );
+  )
 }

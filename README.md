@@ -1,49 +1,58 @@
 # File Drive
 
-A File sharing web Application
+File Drive is a web application for authenticated file upload and sharing.
 
-## Table of contents
+## Current Features
 
-- [File Drive](#file-drive)
-  - [Table of contents](#table-of-contents)
-  - [Overview](#overview)
-    - [The challenge](#the-challenge)
-    - [Screenshots](#screenshots)
-    - [Links](#links)
-    - [Built with](#built-with)
-  - [Author](#author)
+- Authentication and user session management with Clerk
+- File upload to Firebase Storage with unique per-user/per-file storage paths
+- Client-side AES-GCM encryption before upload
+- Upload metadata saved in Firestore
+- File list dashboard with preview, download, and share-link actions
+- Share settings per file: permission mode (`view`, `download`, `view + download`)
+- Share settings per file: expiry (`24h`, `7d`, `never`) and link revoke/restore
+- Public share route (`/share/[id]`) that enforces revoke, expiry, and permission checks
+- Decryption flow on shared file page using key from URL hash (`#k=...`) or manual input
+- Protected routes for upload and files pages
 
-## Overview
+## Thesis Alignment
 
-### The challenge
+This repository currently demonstrates the core workflow:
 
-Users should be able to:
+- sign in
+- upload file
+- view uploaded files
+- share file URL
 
-- Create account and login using google, facebook or github account
-- Upload image and create post
-- Log out feature when a user click on the user profile icon
+The following advanced feature is still planned for a subsequent phase:
 
-### Screenshots
+- richer access/audit notifications
 
-![](./s2.png)
-<![](./s1.png)
+## Stack
 
+- Next.js 14
+- TypeScript
+- Tailwind CSS
+- Clerk
+- Firebase Firestore
+- Firebase Storage
+- React Toastify
 
-### Links
+## Local Development
 
-- Solution URL: [Click Me !](https://github.com/emmanueldonkor/file-drive)
-- Live Site URL: [Click Me !](https://file-drive-gray.vercel.app/)
+```bash
+npm install
+npm run dev
+```
 
-### Built with
+Validation:
 
-- Next js
-- Tailwind css
-- Firebase(storage and store)
-- lucide icons
-- clerk
-- Tyepscript
+```bash
+npm run lint
+npm run build
+```
 
-## Author
+## Links
 
-- Website - [Emmanuel Donkor](emmanueldonkor.com)
-- LinkedIn- [EmmDonkor](https://www.linkedin.com/in/emmanueldonkor/)
+- Repository: <https://github.com/emmanueldonkor/file-drive>
+- Live Site: <https://file-drive-gray.vercel.app/>

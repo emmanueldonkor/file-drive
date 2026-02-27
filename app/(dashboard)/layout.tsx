@@ -1,5 +1,5 @@
-import SideBar from "./_components/SideBar";
-import TopHeader from "./_components/TopHeader";
+import SideBar from './_components/SideBar'
+import TopHeader from './_components/TopHeader'
 
 export default function layout({
   children,
@@ -14,5 +14,5 @@ export default function layout({
         {children}
       </div>
     </div>
-  );
+  )
 }

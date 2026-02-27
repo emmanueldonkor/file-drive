@@ -1,48 +1,47 @@
-import { useState, useEffect, ChangeEvent } from "react";
-import { ToastContainer, toast } from "react-toastify";
-import 'react-toastify/dist/ReactToastify.css';
-import AlertMes from "./AlertMes";
-import FilePreview from "./FilePreview";
-import ProgressBar from "./ProgressBar";
+import { useState, useEffect, ChangeEvent } from 'react'
+import { ToastContainer, toast } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
+import AlertMes from './AlertMes'
+import FilePreview from './FilePreview'
+import ProgressBar from './ProgressBar'
 
 interface UploadFormProps {
-  fileUploadClick: (file: File) => void;
-  progress: number;
-  fileId: string;
+  fileUploadClick: (file: File) => void
+  progress: number
+  fileId: string
 }
 
 export default function UploadForm({
   fileUploadClick,
   progress,
-  fileId
+  fileId,
 }: UploadFormProps) {
-  
-  const [file, setFile] = useState<File | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isUploadComplete, setIsUploadComplete] = useState<boolean>(false);
+  const [file, setFile] = useState<File | null>(null)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [isUploadComplete, setIsUploadComplete] = useState<boolean>(false)
 
   const onFileSelect = (event: ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = event.target.files?.[0];
+    const selectedFile = event.target.files?.[0]
     if (selectedFile) {
       if (selectedFile.size > 200 * 1024 * 1024) {
-        setErrorMessage("Maximum File Size (200MB) Exceeded!");
+        setErrorMessage('Maximum File Size (200MB) Exceeded!')
       } else {
-        setErrorMessage(null);
-        setFile(selectedFile);
+        setErrorMessage(null)
+        setFile(selectedFile)
       }
     }
-  };
+  }
 
   useEffect(() => {
     if (progress === 100) {
-      toast.success("File uploaded successfully!");
-      setIsUploadComplete(true);
+      toast.success('File uploaded successfully!')
+      setIsUploadComplete(true)
       setTimeout(() => {
-        setFile(null);
-        setIsUploadComplete(false);
-      }, 2000);
+        setFile(null)
+        setIsUploadComplete(false)
+      }, 2000)
     }
-  }, [progress, fileId]);
+  }, [progress, fileId])
 
   return (
     <div className="text-center">
@@ -52,6 +51,7 @@ export default function UploadForm({
           htmlFor="dropzone-file"
           className="flex flex-col items-center justify-center w-full h-64 border-2 border-red-300 border-dashed rounded-lg cursor-pointer bg-red-50 hover:bg-gray-100"
         >
+          <span className="sr-only">Upload file</span>
           <div className="flex flex-col items-center justify-center pt-5 pb-6">
             <svg
               className="w-12 h-12 mb-4 text-red-500"
@@ -69,7 +69,7 @@ export default function UploadForm({
               />
             </svg>
             <p className="mb-2 text-lg md:text-2xl text-gray-500">
-              <span className="font-semibold">Click to upload</span> or{" "}
+              <span className="font-semibold">Click to upload</span> or{' '}
               <strong className="text-red-300">drag</strong> and
               <strong className="text-red-300">drop</strong>
             </p>
@@ -95,8 +95,8 @@ export default function UploadForm({
           className="p-2 bg-red-500 text-white w-[30%] rounded-full mt-5 disabled:bg-gray-500"
           onClick={() => {
             if (file) {
-              fileUploadClick(file);
-              setIsUploadComplete(false);
+              fileUploadClick(file)
+              setIsUploadComplete(false)
             }
           }}
         >
@@ -104,8 +104,5 @@ export default function UploadForm({
         </button>
       )}
     </div>
-  );
+  )
 }
-
-
-
