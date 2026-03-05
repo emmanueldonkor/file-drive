@@ -13,6 +13,7 @@ import { useUser } from '@clerk/nextjs'
 import { generateRandomString } from '@/GenerateRandomString'
 import { encryptFile } from '@/lib/fileCrypto'
 import { saveFileKey } from '@/lib/fileKeyStore'
+import { Lock, ShieldCheck } from 'lucide-react'
 
 export default function Upload() {
   const { user, isSignedIn } = useUser()
@@ -165,17 +166,38 @@ export default function Upload() {
   )
 
   return (
-    <div className="p-5 px-8 md:px-28">
-      <h2 className="text-[20px] text-center m-5">
-        Start <strong className="text-red-300">Uploading</strong> Files and{' '}
-        <strong className="text-red-300">Share</strong>
-      </h2>
-      {error && <p className="text-red-500 text-center">{error}</p>}
-      <UploadForm
-        fileUploadClick={uploadFile}
-        progress={progress}
-        fileId={id}
-      />
+    <div className="px-4 py-8 md:px-10 lg:px-24">
+      <div className="mx-auto max-w-5xl rounded-3xl border border-slate-200 bg-gradient-to-br from-rose-50 via-white to-orange-50 p-6 shadow-sm md:p-10">
+        <div className="text-center">
+          <h2 className="text-2xl font-semibold text-slate-800 md:text-3xl">
+            Secure File Upload
+          </h2>
+          <p className="mt-2 text-sm text-slate-600 md:text-base">
+            Upload once, share safely with controlled access and encrypted
+            delivery.
+          </p>
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-xs">
+            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 font-medium text-emerald-700">
+              <ShieldCheck className="h-3.5 w-3.5" />
+              End-to-end client encryption
+            </span>
+            <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1 font-medium text-slate-600">
+              <Lock className="h-3.5 w-3.5" />
+              Share controls: view, download, expiry, revoke
+            </span>
+          </div>
+        </div>
+        {error && (
+          <p className="mt-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-center text-sm text-red-700">
+            {error}
+          </p>
+        )}
+        <UploadForm
+          fileUploadClick={uploadFile}
+          progress={progress}
+          fileId={id}
+        />
+      </div>
     </div>
   )
 }

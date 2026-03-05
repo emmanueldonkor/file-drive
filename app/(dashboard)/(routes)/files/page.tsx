@@ -164,6 +164,35 @@ const getShareLinkForFile = (file: UploadedFile, key?: string | null) => {
   return `${baseLink}#k=${encodeURIComponent(key)}`
 }
 
+const buildEncryptedShareMessage = (
+  fileName: string,
+  shareLink: string,
+  decryptionKey?: string | null,
+) => {
+  const lines = [
+    'Secure File Share',
+    `File: ${fileName}`,
+    `Access Link: ${shareLink}`,
+  ]
+
+  if (decryptionKey) {
+    const quickUnlockLink = `${shareLink}#k=${encodeURIComponent(
+      decryptionKey,
+    )}`
+    lines.push(`Quick Unlock Link: ${quickUnlockLink}`)
+    lines.push(`Decryption Key: ${decryptionKey}`)
+    lines.push(
+      'Instructions: Open the quick link (or access link), then click Unlock.',
+    )
+  } else {
+    lines.push(
+      'Note: This file is encrypted. Send the decryption key through a secure channel.',
+    )
+  }
+
+  return lines.join('\n')
+}
+
 export default function Files() {
   const { user, isSignedIn } = useUser()
   const db = getFirestore(app)
@@ -329,7 +358,10 @@ export default function Files() {
         return
       }
 
-      let shareLink = buildShareLink(file.id, file.shortUrl)
+      const baseShareLink = buildShareLink(file.id, file.shortUrl)
+      const displayFileName = getDisplayFileName(file)
+      let shareCopyText = baseShareLink
+
       if (file.isEncrypted) {
         let key = getFileKey(file.id)
         if (!key) {
@@ -345,23 +377,25 @@ export default function Files() {
             saveFileKey(file.id, key)
           }
         }
-        if (key) {
-          const secureShareMessage = [
-            'Secure File Share',
-            `Link: ${shareLink}`,
-            `Decryption Key: ${key}`,
-            'Open the link and paste the key into the Decryption Key field.',
-          ].join('\n')
-          shareLink = secureShareMessage
-        }
+        shareCopyText = buildEncryptedShareMessage(
+          displayFileName,
+          baseShareLink,
+          key,
+        )
       }
 
-      const copied = await copyToClipboard(shareLink)
+      const copied = await copyToClipboard(shareCopyText)
       if (copied) {
-        toast.success(`Share link for "${getDisplayFileName(file)}" copied.`)
+        toast.success(
+          file.isEncrypted
+            ? 'Secure sharing details copied.'
+            : 'Share link copied.',
+        )
       } else if (typeof window !== 'undefined') {
-        window.prompt('Copy this share link:', shareLink)
-        toast.info('Clipboard permission blocked. Link opened for manual copy.')
+        window.prompt('Copy this share message:', shareCopyText)
+        toast.info(
+          'Clipboard permission blocked. Manual copy window is now open.',
+        )
       }
     } catch (err) {
       toast.error('Failed to copy share link.')
