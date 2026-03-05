@@ -34,3 +34,11 @@ export const getFileKey = (fileId: string): string | null => {
   const store = readStore()
   return store[fileId] ?? null
 }
+
+export const removeFileKey = (fileId: string) => {
+  if (!fileId) return
+  const store = readStore()
+  if (!(fileId in store)) return
+  delete store[fileId]
+  writeStore(store)
+}

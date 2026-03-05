@@ -13,13 +13,20 @@ import {
   DocumentData,
   doc,
   updateDoc,
+  deleteDoc,
 } from 'firebase/firestore'
+import {
+  deleteObject,
+  getStorage,
+  ref as storageRef,
+  type FirebaseStorage,
+} from 'firebase/storage'
 import { app } from '@/firebaseConfig'
 import { useUser } from '@clerk/nextjs'
 import { ToastContainer, toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import { decryptBlob } from '@/lib/fileCrypto'
-import { getFileKey, saveFileKey } from '@/lib/fileKeyStore'
+import { getFileKey, removeFileKey, saveFileKey } from '@/lib/fileKeyStore'
 
 type SharePermission = 'view' | 'download' | 'view_download'
 type ExpiryOption = '24h' | '7d' | 'never'
@@ -30,6 +37,7 @@ interface UploadedFile {
   fileSize: number
   fileType: string
   fileUrl: string
+  storagePath?: string
   isEncrypted?: boolean
   iv?: string
   originalFileName?: string
@@ -164,6 +172,25 @@ const getShareLinkForFile = (file: UploadedFile, key?: string | null) => {
   return `${baseLink}#k=${encodeURIComponent(key)}`
 }
 
+const resolveStorageReference = (
+  storage: FirebaseStorage,
+  file: Pick<UploadedFile, 'storagePath' | 'fileUrl'>,
+) => {
+  if (file.storagePath?.trim()) {
+    return storageRef(storage, file.storagePath)
+  }
+
+  if (file.fileUrl?.trim()) {
+    try {
+      return storageRef(storage, file.fileUrl)
+    } catch {
+      return null
+    }
+  }
+
+  return null
+}
+
 const buildEncryptedShareMessage = (
   fileName: string,
   shareLink: string,
@@ -196,6 +223,7 @@ const buildEncryptedShareMessage = (
 export default function Files() {
   const { user, isSignedIn } = useUser()
   const db = getFirestore(app)
+  const storage = getStorage(app)
   const [files, setFiles] = useState<UploadedFile[]>([])
   const [lastDoc, setLastDoc] =
     useState<QueryDocumentSnapshot<DocumentData> | null>(null)
@@ -203,6 +231,7 @@ export default function Files() {
   const [hasMore, setHasMore] = useState(true)
   const [error, setError] = useState('')
   const [activeFileId, setActiveFileId] = useState<string | null>(null)
+  const [deletingAll, setDeletingAll] = useState(false)
   const [permissionById, setPermissionById] = useState<
     Record<string, SharePermission>
   >({})
@@ -246,6 +275,7 @@ export default function Files() {
             fileSize: data.fileSize ?? 0,
             fileType: data.fileType ?? 'application/octet-stream',
             fileUrl: data.fileUrl ?? '',
+            storagePath: data.storagePath,
             isEncrypted: data.isEncrypted ?? false,
             iv: data.iv,
             originalFileName: data.originalFileName,
@@ -454,6 +484,118 @@ export default function Files() {
     }
   }
 
+  const deleteFile = async (file: UploadedFile) => {
+    if (typeof window === 'undefined') return
+
+    const confirmed = window.confirm(
+      `Delete "${getDisplayFileName(file)}"? This action cannot be undone.`,
+    )
+    if (!confirmed) return
+
+    setActiveFileId(file.id)
+    try {
+      const targetRef = resolveStorageReference(storage, file)
+      if (targetRef) {
+        try {
+          await deleteObject(targetRef)
+        } catch (storageError) {
+          const errorCode = (storageError as { code?: string }).code
+          if (errorCode !== 'storage/object-not-found') {
+            throw storageError
+          }
+        }
+      }
+
+      await deleteDoc(doc(db, 'uploadedFile', file.id))
+      setFiles((prev) => prev.filter((item) => item.id !== file.id))
+      setPermissionById((prev) => {
+        const next = { ...prev }
+        delete next[file.id]
+        return next
+      })
+      setExpiryById((prev) => {
+        const next = { ...prev }
+        delete next[file.id]
+        return next
+      })
+      removeFileKey(file.id)
+      toast.success('File deleted successfully.')
+    } catch (err) {
+      toast.error('Failed to delete file. Please try again.')
+    } finally {
+      setActiveFileId(null)
+    }
+  }
+
+  const deleteAllFiles = async () => {
+    const userEmail = user?.primaryEmailAddress?.emailAddress || ''
+    if (!userEmail) {
+      toast.error('Unable to identify user.')
+      return
+    }
+
+    if (typeof window === 'undefined') return
+    const confirmed = window.confirm(
+      'Delete all your uploaded files? This action cannot be undone.',
+    )
+    if (!confirmed) return
+
+    setDeletingAll(true)
+    try {
+      const allFilesQuery = query(
+        collection(db, 'uploadedFile'),
+        where('userEmail', '==', userEmail),
+      )
+      const querySnapshot = await getDocs(allFilesQuery)
+
+      if (querySnapshot.empty) {
+        setFiles([])
+        setPermissionById({})
+        setExpiryById({})
+        setLastDoc(null)
+        setHasMore(false)
+        toast.info('No files found to delete.')
+        return
+      }
+
+      await Promise.all(
+        querySnapshot.docs.map(async (docSnap) => {
+          const data = docSnap.data() as Partial<UploadedFile>
+          const targetRef = resolveStorageReference(storage, {
+            storagePath: data.storagePath,
+            fileUrl: data.fileUrl ?? '',
+          })
+
+          if (targetRef) {
+            try {
+              await deleteObject(targetRef)
+            } catch (storageError) {
+              const errorCode = (storageError as { code?: string }).code
+              if (errorCode !== 'storage/object-not-found') {
+                throw storageError
+              }
+            }
+          }
+
+          await deleteDoc(doc(db, 'uploadedFile', docSnap.id))
+          removeFileKey(docSnap.id)
+        }),
+      )
+
+      setFiles([])
+      setPermissionById({})
+      setExpiryById({})
+      setLastDoc(null)
+      setHasMore(false)
+      toast.success(`Deleted ${querySnapshot.size} file(s).`)
+    } catch (err) {
+      toast.error('Failed to delete all files. Please try again.')
+    } finally {
+      setDeletingAll(false)
+      setActiveFileId(null)
+    }
+  }
+
   useEffect(() => {
     if (isSignedIn) {
       fetchFiles()
@@ -472,9 +614,20 @@ export default function Files() {
 
   return (
     <div className="p-6">
-      <h3 className="mb-6 text-center text-3xl font-bold text-black-800">
-        Your Uploaded Files
-      </h3>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <h3 className="text-3xl font-bold text-black-800">
+          Your Uploaded Files
+        </h3>
+        {files.length > 0 && (
+          <button
+            onClick={deleteAllFiles}
+            disabled={deletingAll}
+            className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors duration-300 hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-red-300"
+          >
+            {deletingAll ? 'Deleting all...' : 'Delete All Files'}
+          </button>
+        )}
+      </div>
       {files.length > 0 ? (
         <>
           <div className="mb-4 overflow-x-auto rounded-lg border border-gray-200 shadow">
@@ -532,6 +685,13 @@ export default function Files() {
                           onClick={() => copyShareLink(file)}
                         >
                           Share
+                        </button>
+                        <button
+                          className="text-red-600 transition-colors duration-300 hover:text-red-800 disabled:cursor-not-allowed disabled:text-red-300"
+                          onClick={() => deleteFile(file)}
+                          disabled={activeFileId === file.id}
+                        >
+                          {activeFileId === file.id ? 'Deleting...' : 'Delete'}
                         </button>
                       </div>
 
