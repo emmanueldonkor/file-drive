@@ -191,35 +191,6 @@ const resolveStorageReference = (
   return null
 }
 
-const buildEncryptedShareMessage = (
-  fileName: string,
-  shareLink: string,
-  decryptionKey?: string | null,
-) => {
-  const lines = [
-    'Secure File Share',
-    `File: ${fileName}`,
-    `Access Link: ${shareLink}`,
-  ]
-
-  if (decryptionKey) {
-    const quickUnlockLink = `${shareLink}#k=${encodeURIComponent(
-      decryptionKey,
-    )}`
-    lines.push(`Quick Unlock Link: ${quickUnlockLink}`)
-    lines.push(`Decryption Key: ${decryptionKey}`)
-    lines.push(
-      'Instructions: Open the quick link (or access link), then click Unlock.',
-    )
-  } else {
-    lines.push(
-      'Note: This file is encrypted. Send the decryption key through a secure channel.',
-    )
-  }
-
-  return lines.join('\n')
-}
-
 export default function Files() {
   const { user, isSignedIn } = useUser()
   const db = getFirestore(app)
@@ -388,7 +359,6 @@ export default function Files() {
       }
 
       const baseShareLink = buildShareLink(file.id, file.shortUrl)
-      const displayFileName = getDisplayFileName(file)
       let shareCopyText = baseShareLink
 
       if (file.isEncrypted) {
@@ -406,28 +376,49 @@ export default function Files() {
             saveFileKey(file.id, key)
           }
         }
-        shareCopyText = buildEncryptedShareMessage(
-          displayFileName,
-          baseShareLink,
-          key,
-        )
+        if (key) {
+          shareCopyText = getShareLinkForFile(file, key)
+        }
       }
 
       const copied = await copyToClipboard(shareCopyText)
       if (copied) {
         toast.success(
-          file.isEncrypted
-            ? 'Secure sharing details copied.'
-            : 'Share link copied.',
+          file.isEncrypted ? 'Quick unlock link copied.' : 'Share link copied.',
         )
       } else if (typeof window !== 'undefined') {
-        window.prompt('Copy this share message:', shareCopyText)
+        window.prompt('Copy this link:', shareCopyText)
         toast.info(
           'Clipboard permission blocked. Manual copy window is now open.',
         )
       }
     } catch (err) {
       toast.error('Failed to copy share link.')
+    }
+  }
+
+  const copyDecryptionKey = async (file: UploadedFile) => {
+    if (!file.isEncrypted) return
+
+    let key = getFileKey(file.id)
+    if (!key) {
+      const providedKey = window.prompt(
+        'Enter the decryption key for this file:',
+      )
+      if (!providedKey?.trim()) {
+        toast.warning('No key copied.')
+        return
+      }
+      key = normalizeDecryptionKey(providedKey)
+      saveFileKey(file.id, key)
+    }
+
+    const copied = await copyToClipboard(key)
+    if (copied) {
+      toast.success('Decryption key copied.')
+    } else if (typeof window !== 'undefined') {
+      window.prompt('Copy this decryption key:', key)
+      toast.info('Clipboard permission blocked. Key opened for manual copy.')
     }
   }
 
@@ -605,6 +596,14 @@ export default function Files() {
                         >
                           Share
                         </button>
+                        {file.isEncrypted && (
+                          <button
+                            className="text-slate-700 transition-colors duration-300 hover:text-slate-900"
+                            onClick={() => copyDecryptionKey(file)}
+                          >
+                            Copy Key
+                          </button>
+                        )}
                         <button
                           className="text-red-600 transition-colors duration-300 hover:text-red-800 disabled:cursor-not-allowed disabled:text-red-300"
                           onClick={() => deleteFile(file)}
