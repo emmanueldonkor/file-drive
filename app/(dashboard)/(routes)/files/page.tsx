@@ -231,7 +231,6 @@ export default function Files() {
   const [hasMore, setHasMore] = useState(true)
   const [error, setError] = useState('')
   const [activeFileId, setActiveFileId] = useState<string | null>(null)
-  const [deletingAll, setDeletingAll] = useState(false)
   const [permissionById, setPermissionById] = useState<
     Record<string, SharePermission>
   >({})
@@ -527,75 +526,6 @@ export default function Files() {
     }
   }
 
-  const deleteAllFiles = async () => {
-    const userEmail = user?.primaryEmailAddress?.emailAddress || ''
-    if (!userEmail) {
-      toast.error('Unable to identify user.')
-      return
-    }
-
-    if (typeof window === 'undefined') return
-    const confirmed = window.confirm(
-      'Delete all your uploaded files? This action cannot be undone.',
-    )
-    if (!confirmed) return
-
-    setDeletingAll(true)
-    try {
-      const allFilesQuery = query(
-        collection(db, 'uploadedFile'),
-        where('userEmail', '==', userEmail),
-      )
-      const querySnapshot = await getDocs(allFilesQuery)
-
-      if (querySnapshot.empty) {
-        setFiles([])
-        setPermissionById({})
-        setExpiryById({})
-        setLastDoc(null)
-        setHasMore(false)
-        toast.info('No files found to delete.')
-        return
-      }
-
-      await Promise.all(
-        querySnapshot.docs.map(async (docSnap) => {
-          const data = docSnap.data() as Partial<UploadedFile>
-          const targetRef = resolveStorageReference(storage, {
-            storagePath: data.storagePath,
-            fileUrl: data.fileUrl ?? '',
-          })
-
-          if (targetRef) {
-            try {
-              await deleteObject(targetRef)
-            } catch (storageError) {
-              const errorCode = (storageError as { code?: string }).code
-              if (errorCode !== 'storage/object-not-found') {
-                throw storageError
-              }
-            }
-          }
-
-          await deleteDoc(doc(db, 'uploadedFile', docSnap.id))
-          removeFileKey(docSnap.id)
-        }),
-      )
-
-      setFiles([])
-      setPermissionById({})
-      setExpiryById({})
-      setLastDoc(null)
-      setHasMore(false)
-      toast.success(`Deleted ${querySnapshot.size} file(s).`)
-    } catch (err) {
-      toast.error('Failed to delete all files. Please try again.')
-    } finally {
-      setDeletingAll(false)
-      setActiveFileId(null)
-    }
-  }
-
   useEffect(() => {
     if (isSignedIn) {
       fetchFiles()
@@ -614,20 +544,9 @@ export default function Files() {
 
   return (
     <div className="p-6">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h3 className="text-3xl font-bold text-black-800">
-          Your Uploaded Files
-        </h3>
-        {files.length > 0 && (
-          <button
-            onClick={deleteAllFiles}
-            disabled={deletingAll}
-            className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors duration-300 hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-red-300"
-          >
-            {deletingAll ? 'Deleting all...' : 'Delete All Files'}
-          </button>
-        )}
-      </div>
+      <h3 className="mb-6 text-center text-3xl font-bold text-black-800">
+        Your Uploaded Files
+      </h3>
       {files.length > 0 ? (
         <>
           <div className="mb-4 overflow-x-auto rounded-lg border border-gray-200 shadow">
