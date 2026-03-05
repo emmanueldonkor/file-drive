@@ -1,7 +1,7 @@
 import { useState, useEffect, ChangeEvent, DragEvent, useRef } from 'react'
 import { ToastContainer, toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
-import { ShieldCheck, UploadCloud } from 'lucide-react'
+import { UploadCloud } from 'lucide-react'
 import AlertMes from './AlertMes'
 import FilePreview from './FilePreview'
 import ProgressBar from './ProgressBar'
@@ -70,12 +70,6 @@ export default function UploadForm({
   return (
     <div className="mx-auto mt-6 max-w-3xl text-center">
       <ToastContainer position="top-right" autoClose={2500} />
-      <div className="mb-5 flex items-center justify-center">
-        <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-medium text-emerald-700">
-          <ShieldCheck className="h-4 w-4" />
-          Client-side AES-GCM encryption enabled
-        </div>
-      </div>
       <div className="flex w-full items-center justify-center">
         <label
           htmlFor="dropzone-file"
@@ -102,7 +96,7 @@ export default function UploadForm({
               or drag and drop
             </p>
             <p className="mb-1 text-sm text-slate-500">
-              Your file will be encrypted before it is uploaded.
+              Upload and share in one step.
             </p>
             <p className="text-xs text-slate-500">
               Supported: SVG, PNG, JPG, PDF, GIF | Maximum size: 200MB
@@ -139,13 +133,11 @@ export default function UploadForm({
             }
           }}
         >
-          {file
-            ? `Upload Encrypted File (${formatFileSize(file.size)})`
-            : 'Upload Encrypted File'}
+          {file ? `Upload File (${formatFileSize(file.size)})` : 'Upload File'}
         </button>
       )}
       <p className="mt-3 text-xs text-slate-500">
-        Tip: keep file names clean and share decryption keys separately.
+        Tip: keep file names clear and short.
       </p>
     </div>
   )

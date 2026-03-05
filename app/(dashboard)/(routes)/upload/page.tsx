@@ -11,8 +11,6 @@ import {
 import { doc, getFirestore, setDoc } from 'firebase/firestore'
 import { useUser } from '@clerk/nextjs'
 import { generateRandomString } from '@/GenerateRandomString'
-import { encryptFile } from '@/lib/fileCrypto'
-import { saveFileKey } from '@/lib/fileKeyStore'
 import { Lock, ShieldCheck } from 'lucide-react'
 
 export default function Upload() {
@@ -36,14 +34,7 @@ export default function Upload() {
   }
 
   const saveInfo = useCallback(
-    async (
-      file: File,
-      fileUrl: string,
-      docId: string,
-      storagePath: string,
-      iv: string,
-      algorithm: string,
-    ) => {
+    async (file: File, fileUrl: string, docId: string, storagePath: string) => {
       const userEmail = user?.primaryEmailAddress?.emailAddress || ''
       const userName = user?.fullName || ''
       const baseUrl = getBaseUrl()
@@ -65,9 +56,9 @@ export default function Upload() {
           expiresAt: null,
           isRevoked: false,
           createdAt: Date.now(),
-          isEncrypted: true,
-          encryptionAlgorithm: algorithm,
-          iv,
+          isEncrypted: false,
+          encryptionAlgorithm: null,
+          iv: null,
           originalFileName: file.name,
           originalFileType: file.type || 'application/octet-stream',
           originalFileSize: file.size,
@@ -99,38 +90,14 @@ export default function Upload() {
       const docId = generateRandomString(20)
       const ownerId = user?.id || 'anonymous'
       const sanitizedFileName = sanitizeFileName(file.name)
-      const storagePath = `file-upload/${ownerId}/${docId}-${sanitizedFileName}.enc`
-
-      let encryptedResult: Awaited<ReturnType<typeof encryptFile>> | null = null
-
-      try {
-        encryptedResult = await encryptFile(file)
-      } catch (error) {
-        console.error('Encryption failed', error)
-        setError('Encryption failed. Please try again.')
-        return
-      }
-
-      if (!encryptedResult) return
-
-      const encryptedFile = new File(
-        [encryptedResult.encryptedBlob],
-        `${sanitizedFileName}.enc`,
-        {
-          type: 'application/octet-stream',
-        },
-      )
+      const storagePath = `file-upload/${ownerId}/${docId}-${sanitizedFileName}`
       const metadata = {
-        contentType: encryptedFile.type,
+        contentType: file.type || 'application/octet-stream',
       }
 
       const storageRef = ref(storage, storagePath)
 
-      const uploadTask = uploadBytesResumable(
-        storageRef,
-        encryptedFile,
-        metadata,
-      )
+      const uploadTask = uploadBytesResumable(storageRef, file, metadata)
 
       uploadTask.on(
         'state_changed',
@@ -146,15 +113,7 @@ export default function Upload() {
         async () => {
           try {
             const downloadURL = await getDownloadURL(uploadTask.snapshot.ref)
-            await saveInfo(
-              file,
-              downloadURL,
-              docId,
-              storagePath,
-              encryptedResult.iv,
-              encryptedResult.algorithm,
-            )
-            saveFileKey(docId, encryptedResult.encryptionKey)
+            await saveInfo(file, downloadURL, docId, storagePath)
           } catch (error) {
             console.error('Error saving file info', error)
             setError('Error saving file info. Please try again.')
@@ -170,16 +129,15 @@ export default function Upload() {
       <div className="mx-auto max-w-5xl rounded-3xl border border-slate-200 bg-gradient-to-br from-rose-50 via-white to-orange-50 p-6 shadow-sm md:p-10">
         <div className="text-center">
           <h2 className="text-2xl font-semibold text-slate-800 md:text-3xl">
-            Secure File Upload
+            File Upload
           </h2>
           <p className="mt-2 text-sm text-slate-600 md:text-base">
-            Upload once, share safely with controlled access and encrypted
-            delivery.
+            Upload once and share quickly with clear access controls.
           </p>
           <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-xs">
             <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 font-medium text-emerald-700">
               <ShieldCheck className="h-3.5 w-3.5" />
-              End-to-end client encryption
+              Fast direct sharing
             </span>
             <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1 font-medium text-slate-600">
               <Lock className="h-3.5 w-3.5" />

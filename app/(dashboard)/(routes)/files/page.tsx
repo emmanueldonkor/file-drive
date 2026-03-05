@@ -25,8 +25,7 @@ import { app } from '@/firebaseConfig'
 import { useUser } from '@clerk/nextjs'
 import { ToastContainer, toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
-import { decryptBlob } from '@/lib/fileCrypto'
-import { getFileKey, removeFileKey, saveFileKey } from '@/lib/fileKeyStore'
+import { removeFileKey } from '@/lib/fileKeyStore'
 
 type SharePermission = 'view' | 'download' | 'view_download'
 type ExpiryOption = '24h' | '7d' | 'never'
@@ -161,15 +160,6 @@ const formatFileSize = (bytes: number) => {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
-}
-
-const normalizeDecryptionKey = (value: string) =>
-  value.trim().replace(/\s+/g, '+')
-
-const getShareLinkForFile = (file: UploadedFile, key?: string | null) => {
-  const baseLink = buildShareLink(file.id, file.shortUrl)
-  if (!file.isEncrypted || !key) return baseLink
-  return `${baseLink}#k=${encodeURIComponent(key)}`
 }
 
 const resolveStorageReference = (
@@ -358,34 +348,11 @@ export default function Files() {
         return
       }
 
-      const baseShareLink = buildShareLink(file.id, file.shortUrl)
-      let shareCopyText = baseShareLink
-
-      if (file.isEncrypted) {
-        let key = getFileKey(file.id)
-        if (!key) {
-          const providedKey = window.prompt(
-            'This file is encrypted. Enter the decryption key to include in the share link:',
-          )
-          if (!providedKey?.trim()) {
-            toast.warning(
-              'Sharing without key. Receiver must enter key manually on the share page.',
-            )
-          } else {
-            key = normalizeDecryptionKey(providedKey)
-            saveFileKey(file.id, key)
-          }
-        }
-        if (key) {
-          shareCopyText = getShareLinkForFile(file, key)
-        }
-      }
+      const shareCopyText = buildShareLink(file.id, file.shortUrl)
 
       const copied = await copyToClipboard(shareCopyText)
       if (copied) {
-        toast.success(
-          file.isEncrypted ? 'Quick unlock link copied.' : 'Share link copied.',
-        )
+        toast.success('Share link copied.')
       } else if (typeof window !== 'undefined') {
         window.prompt('Copy this link:', shareCopyText)
         toast.info(
@@ -394,83 +361,6 @@ export default function Files() {
       }
     } catch (err) {
       toast.error('Failed to copy share link.')
-    }
-  }
-
-  const copyDecryptionKey = async (file: UploadedFile) => {
-    if (!file.isEncrypted) return
-
-    let key = getFileKey(file.id)
-    if (!key) {
-      const providedKey = window.prompt(
-        'Enter the decryption key for this file:',
-      )
-      if (!providedKey?.trim()) {
-        toast.warning('No key copied.')
-        return
-      }
-      key = normalizeDecryptionKey(providedKey)
-      saveFileKey(file.id, key)
-    }
-
-    const copied = await copyToClipboard(key)
-    if (copied) {
-      toast.success('Decryption key copied.')
-    } else if (typeof window !== 'undefined') {
-      window.prompt('Copy this decryption key:', key)
-      toast.info('Clipboard permission blocked. Key opened for manual copy.')
-    }
-  }
-
-  const resolveEncryptionKey = (file: UploadedFile): string | null => {
-    const storedKey = getFileKey(file.id)
-    if (storedKey) return storedKey
-
-    const userProvidedKey = window.prompt(
-      'Enter the decryption key for this file:',
-    )
-    if (!userProvidedKey?.trim()) return null
-    const normalizedKey = normalizeDecryptionKey(userProvidedKey)
-    saveFileKey(file.id, normalizedKey)
-    return normalizedKey
-  }
-
-  const downloadDecryptedFile = async (file: UploadedFile) => {
-    if (!file.isEncrypted) return
-    if (!file.iv) {
-      toast.error('Missing encryption metadata for this file.')
-      return
-    }
-
-    const encryptionKey = resolveEncryptionKey(file)
-    if (!encryptionKey) {
-      toast.error('Decryption key is required.')
-      return
-    }
-
-    try {
-      const response = await fetch(file.fileUrl)
-      if (!response.ok) {
-        throw new Error('Failed to fetch encrypted file')
-      }
-      const encryptedBlob = await response.blob()
-      const decryptedBlob = await decryptBlob(
-        encryptedBlob,
-        encryptionKey,
-        file.iv,
-        file.originalFileType || 'application/octet-stream',
-      )
-      const objectUrl = URL.createObjectURL(decryptedBlob)
-      const link = document.createElement('a')
-      link.href = objectUrl
-      link.download = file.originalFileName || file.fileName
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      URL.revokeObjectURL(objectUrl)
-      toast.success('File decrypted and downloaded.')
-    } catch (error) {
-      toast.error('Unable to decrypt this file. Check your key and try again.')
     }
   }
 
@@ -563,47 +453,26 @@ export default function Files() {
                     <td className="px-6 py-3">
                       <div className="flex flex-wrap gap-3">
                         <a
-                          href={
-                            file.isEncrypted
-                              ? getShareLinkForFile(file, getFileKey(file.id))
-                              : file.fileUrl
-                          }
+                          href={file.fileUrl}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-blue-600 transition-colors duration-300 hover:text-blue-800"
                         >
                           Preview
                         </a>
-                        {file.isEncrypted ? (
-                          <button
-                            className="text-green-600 transition-colors duration-300 hover:text-green-800"
-                            onClick={() => downloadDecryptedFile(file)}
-                          >
-                            Download
-                          </button>
-                        ) : (
-                          <a
-                            href={file.fileUrl}
-                            download={file.fileName}
-                            className="text-green-600 transition-colors duration-300 hover:text-green-800"
-                          >
-                            Download
-                          </a>
-                        )}
+                        <a
+                          href={file.fileUrl}
+                          download={file.fileName}
+                          className="text-green-600 transition-colors duration-300 hover:text-green-800"
+                        >
+                          Download
+                        </a>
                         <button
                           className="text-yellow-600 transition-colors duration-300 hover:text-yellow-800"
                           onClick={() => copyShareLink(file)}
                         >
                           Share
                         </button>
-                        {file.isEncrypted && (
-                          <button
-                            className="text-slate-700 transition-colors duration-300 hover:text-slate-900"
-                            onClick={() => copyDecryptionKey(file)}
-                          >
-                            Copy Key
-                          </button>
-                        )}
                         <button
                           className="text-red-600 transition-colors duration-300 hover:text-red-800 disabled:cursor-not-allowed disabled:text-red-300"
                           onClick={() => deleteFile(file)}
